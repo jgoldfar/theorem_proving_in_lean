@@ -1,0 +1,454 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>8. Induction and Recursion &#8212; Theorem Proving in Lean 3.2.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '3.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="9. Structures and Records" href="structures_and_records.html" />
+    <link rel="prev" title="7. Inductive Types" href="inductive_types.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="induction-and-recursion">
+<span id="id1"></span><h1>8. Induction and Recursion<a class="headerlink" href="#induction-and-recursion" title="Permalink to this headline">¶</a></h1>
+<p>Other than the type universes and Pi types, inductively defined types provide the only means of defining new types in the the version of Calculus of Constructions that has been implemented in Lean. We have also seen that, fundamentally, the constructors and the recursors provide the only means of defining functions on these types. By the propositions-as-types correspondence, this means that induction is the fundamental method of proof for these
+types.</p>
+<p>Since working with induction and recursion is so fundamental, Lean provides more natural ways of defining recursive functions, performing pattern matching, and writing inductive proofs. Behind the scenes, these are “compiled” down to recursors.</p>
+<p>Thus, the function definition package, which performs this reduction, is
+not part of the trusted code base.</p>
+<div class="section" id="pattern-matching">
+<h2>8.1. Pattern Matching<a class="headerlink" href="#pattern-matching" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">cases_on</span></code> recursor can be used to define functions and prove theorems by cases. But complicated definitions may use several nested <code class="docutils literal"><span class="pre">cases_on</span></code> applications, and may be hard to read and understand. Pattern matching provides a more convenient and standard way of defining functions and proving theorems. Lean supports a very general form of pattern matching called <em>dependent pattern matching</em>.</p>
+<p>A pattern-matching definition is of the following form:</p>
+<div class="highlight-text"><div class="highlight"><pre>definition [name] [parameters] : [domain] → [codomain]
+| [patterns_1] := [value_1]
+...
+| [patterns_n] := [value_n]
+</pre></div>
+</div>
+<p>The parameters are fixed, and each assignment defines the value of the function for a different case specified by the given pattern. As a first example, we define the function <code class="docutils literal"><span class="pre">sub2</span></code> for natural numbers:</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=open%20nat%0A%0Adef%20sub2%20:%20nat%20%E2%86%92%20nat%0A%7C%200%20%20%20%20%20:=%200%0A%7C%201%20%20%20%20%20:=%200%0A%7C%20(a+2)%20:=%20a%0A%0Aexample%20:%20sub2%205%20=%203%20:=%20rfl" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kn">open</span> <span class="n">nat</span>
+
+<span class="kd">def</span> <span class="n">sub2</span> <span class="o">:</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span>
+<span class="bp">|</span> <span class="mi">0</span>     <span class="o">:=</span> <span class="mi">0</span>
+<span class="bp">|</span> <span class="mi">1</span>     <span class="o">:=</span> <span class="mi">0</span>
+<span class="bp">|</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">2</span><span class="o">)</span> <span class="o">:=</span> <span class="n">a</span>
+
+<span class="kd">example</span> <span class="o">:</span> <span class="n">sub2</span> <span class="mi">5</span> <span class="bp">=</span> <span class="mi">3</span> <span class="o">:=</span> <span class="n">rfl</span>
+</pre></div>
+</div>
+</div><p>The default compilation method guarantees that the pattern matching equations hold definitionally.</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=open%20nat%0A%0Adef%20sub2%20:%20nat%20%E2%86%92%20nat%0A%7C%200%20%20%20%20%20:=%200%0A%7C%201%20%20%20%20%20:=%200%0A%7C%20(a+2)%20:=%20a%0A%0A--%20BEGIN%0Aexample%20:%20sub2%200%20=%200%20:=%20rfl%0A%0Aexample%20:%20sub2%201%20=%200%20:=%20rfl%0A%0Aexample%20(a%20:%20nat)%20:%20sub2%20(a%20+%202)%20=%20a%20:=%20rfl%0A--%20END" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">example</span> <span class="o">:</span> <span class="n">sub2</span> <span class="mi">0</span> <span class="bp">=</span> <span class="mi">0</span> <span class="o">:=</span> <span class="n">rfl</span>
+
+<span class="kd">example</span> <span class="o">:</span> <span class="n">sub2</span> <span class="mi">1</span> <span class="bp">=</span> <span class="mi">0</span> <span class="o">:=</span> <span class="n">rfl</span>
+
+<span class="kd">example</span> <span class="o">(</span><span class="n">a</span> <span class="o">:</span> <span class="n">nat</span><span class="o">)</span> <span class="o">:</span> <span class="n">sub2</span> <span class="o">(</span><span class="n">a</span> <span class="bp">+</span> <span class="mi">2</span><span class="o">)</span> <span class="bp">=</span> <span class="n">a</span> <span class="o">:=</span> <span class="n">rfl</span>
+</pre></div>
+</div>
+</div><p>We can use the command <code class="docutils literal"><span class="pre">#print</span> <span class="pre">sub2</span></code> to see how our definition was compiled into recursors.</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=open%20nat%0A%0Adef%20sub2%20:%20nat%20%E2%86%92%20nat%0A%7C%200%20%20%20%20%20:=%200%0A%7C%201%20%20%20%20%20:=%200%0A%7C%20(a+2)%20:=%20a%0A%0A--%20BEGIN%0A#print%20sub2%0A--%20END" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="k">#print</span> <span class="n">sub2</span>
+</pre></div>
+</div>
+</div><p>We will say a term is a <em>constructor application</em> if it is of the form <code class="docutils literal"><span class="pre">c</span> <span class="pre">a_1</span> <span class="pre">...</span> <span class="pre">a_n</span></code> where <code class="docutils literal"><span class="pre">c</span></code> is the constructor of some inductive data type. Note that in the definition <code class="docutils literal"><span class="pre">sub2</span></code>, the terms <code class="docutils literal"><span class="pre">1</span></code> and <code class="docutils literal"><span class="pre">a+2</span></code> are not constructor applications. However, the compiler normalizes them at compilation time, and obtains the constructor applications <code class="docutils literal"><span class="pre">succ</span> <span class="pre">zero</span></code> and <code class="docutils literal"><span class="pre">succ</span> <span class="pre">(succ</span> <span class="pre">a)</span></code> respectively. This normalization step is just a convenience that allows us to write definitions resembling the ones found in textbooks. There is no magic here: the compiler simply uses the kernel’s ordinary evaluation mechanism. If we had written <code class="docutils literal"><span class="pre">2+a</span></code>, the definition would be rejected since <code class="docutils literal"><span class="pre">2+a</span></code> does not normalize into a constructor application.</p>
+<p>In the next example, we use pattern-matching to define Boolean negation <code class="docutils literal"><span class="pre">bnot</span></code>, and proving <code class="docutils literal"><span class="pre">bnot</span> <span class="pre">(bnot</span> <span class="pre">b)</span> <span class="pre">=</span> <span class="pre">b</span></code>.</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=namespace%20hide%0A--%20BEGIN%0Adef%20bnot%20:%20bool%20%E2%86%92%20bool%0A%7C%20tt%20:=%20ff%0A%7C%20ff%20:=%20tt%0A%0Atheorem%20bnot_bnot%20:%20%E2%88%80%20(b%20:%20bool),%20bnot%20(bnot%20b)%20=%20b%0A%7C%20tt%20:=%20rfl%20%20%20%20--%20proof%20that%20bnot%20(bnot%20tt)%20=%20tt%0A%7C%20ff%20:=%20rfl%20%20%20%20--%20proof%20that%20bnot%20(bnot%20ff)%20=%20ff%0A--%20END%0Aend%20hide" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">def</span> <span class="n">bnot</span> <span class="o">:</span> <span class="n">bool</span> <span class="bp">→</span> <span class="n">bool</span>
+<span class="bp">|</span> <span class="n">tt</span> <span class="o">:=</span> <span class="n">ff</span>
+<span class="bp">|</span> <span class="n">ff</span> <span class="o">:=</span> <span class="n">tt</span>
+
+<span class="kd">theorem</span> <span class="n">bnot_bnot</span> <span class="o">:</span> <span class="bp">∀</span> <span class="o">(</span><span class="n">b</span> <span class="o">:</span> <span class="n">bool</span><span class="o">),</span> <span class="n">bnot</span> <span class="o">(</span><span class="n">bnot</span> <span class="n">b</span><span class="o">)</span> <span class="bp">=</span> <span class="n">b</span>
+<span class="bp">|</span> <span class="n">tt</span> <span class="o">:=</span> <span class="n">rfl</span>    <span class="c1">-- proof that bnot (bnot tt) = tt</span>
+<span class="bp">|</span> <span class="n">ff</span> <span class="o">:=</span> <span class="n">rfl</span>    <span class="c1">-- proof that bnot (bnot ff) = ff</span>
+</pre></div>
+</div>
+</div><p>As described in <a class="reference internal" href="inductive_types.html#inductive-types"><span class="std std-numref">Chapter 7</span></a>, Lean inductive data types can be parametric. The following example defines the <code class="docutils literal"><span class="pre">tail</span></code> function using pattern matching. The argument <code class="docutils literal"><span class="pre">α</span> <span class="pre">:</span> <span class="pre">Type</span></code> is a parameter and occurs before the colon to indicate it does not participate in the pattern matching. Lean allows parameters to occur after <code class="docutils literal"><span class="pre">:</span></code>, but it cannot pattern match on them.</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=open%20list%0A%0Adef%20tail1%20%7B%CE%B1%20:%20Type%7D%20:%20list%20%CE%B1%20%E2%86%92%20list%20%CE%B1%0A%7C%20nil%20%20%20%20%20%20:=%20nil%0A%7C%20(h%20::%20t)%20:=%20t%0A%0A--%20Parameter%20%CE%B1%20may%20occur%20after%20':'%0Adef%20tail2%20:%20%CE%A0%20%7B%CE%B1%20:%20Type%7D,%20list%20%CE%B1%20%E2%86%92%20list%20%CE%B1%0A%7C%20%CE%B1%20nil%20%20%20%20%20%20:=%20nil%0A%7C%20%CE%B1%20(h%20::%20t)%20:=%20t" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kn">open</span> <span class="n">list</span>
+
+<span class="kd">def</span> <span class="n">tail1</span> <span class="o">{</span><span class="n">α</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">}</span> <span class="o">:</span> <span class="n">list</span> <span class="n">α</span> <span class="bp">→</span> <span class="n">list</span> <span class="n">α</span>
+<span class="bp">|</span> <span class="n">nil</span>      <span class="o">:=</span> <span class="n">nil</span>
+<span class="bp">|</span> <span class="o">(</span><span class="n">h</span> <span class="o">::</span> <span class="n">t</span><span class="o">)</span> <span class="o">:=</span> <span class="n">t</span>
+
+<span class="c1">-- Parameter α may occur after &#39;:&#39;</span>
+<span class="kd">def</span> <span class="n">tail2</span> <span class="o">:</span> <span class="bp">Π</span> <span class="o">{</span><span class="n">α</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">},</span> <span class="n">list</span> <span class="n">α</span> <span class="bp">→</span> <span class="n">list</span> <span class="n">α</span>
+<span class="bp">|</span> <span class="n">α</span> <span class="n">nil</span>      <span class="o">:=</span> <span class="n">nil</span>
+<span class="bp">|</span> <span class="n">α</span> <span class="o">(</span><span class="n">h</span> <span class="o">::</span> <span class="n">t</span><span class="o">)</span> <span class="o">:=</span> <span class="n">t</span>
+</pre></div>
+</div>
+</div></div>
+<div class="section" id="structural-recursion-and-induction">
+<h2>8.2. Structural Recursion and Induction<a class="headerlink" href="#structural-recursion-and-induction" title="Permalink to this headline">¶</a></h2>
+<p>The function definition package supports structural recursion, that is, recursive applications where one of the arguments is a subterm of the corresponding term on the left-hand-side. Later, we describe how to compile recursive equations using well-founded recursion. The main advantage of the default compilation method is that the recursive equations hold definitionally.</p>
+<p>Here are some examples from the last chapter, written in the new style:</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=namespace%20hide%0A%0Ainductive%20nat%20:%20Type%0A%7C%20zero%20:%20nat%0A%7C%20succ%20:%20nat%20%E2%86%92%20nat%0A%0Anamespace%20nat%0A%0A--%20BEGIN%0Adef%20add%20:%20nat%20%E2%86%92%20nat%20%E2%86%92%20nat%0A%7C%20m%20zero%20%20%20%20%20:=%20m%0A%7C%20m%20(succ%20n)%20:=%20succ%20(add%20m%20n)%0A%0Alocal%20infix%20%60+%60%20:=%20add%0A%0Atheorem%20add_zero%20(m%20:%20nat)%20:%20m%20+%20zero%20=%20m%20:=%20rfl%0Atheorem%20add_succ%20(m%20n%20:%20nat)%20:%20m%20+%20succ%20n%20=%20succ%20(m%20+%20n)%20:=%20rfl%0A%0Atheorem%20zero_add%20:%20%E2%88%80%20n,%20zero%20+%20n%20=%20n%0A%7C%20zero%20%20%20%20%20:=%20rfl%0A%7C%20(succ%20n)%20:=%20congr_arg%20succ%20(zero_add%20n)%0A%0Adef%20mul%20:%20nat%20%E2%86%92%20nat%20%E2%86%92%20nat%0A%7C%20n%20zero%20%20%20%20%20:=%20zero%0A%7C%20n%20(succ%20m)%20:=%20mul%20n%20m%20+%20m%0A--%20END%0A%0Aend%20nat%0Aend%20hide" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">def</span> <span class="n">add</span> <span class="o">:</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span>
+<span class="bp">|</span> <span class="n">m</span> <span class="n">zero</span>     <span class="o">:=</span> <span class="n">m</span>
+<span class="bp">|</span> <span class="n">m</span> <span class="o">(</span><span class="n">succ</span> <span class="n">n</span><span class="o">)</span> <span class="o">:=</span> <span class="n">succ</span> <span class="o">(</span><span class="n">add</span> <span class="n">m</span> <span class="n">n</span><span class="o">)</span>
+
+<span class="kn">local</span> <span class="kd">infix</span> <span class="bp">`+`</span> <span class="o">:=</span> <span class="n">add</span>
+
+<span class="kd">theorem</span> <span class="n">add_zero</span> <span class="o">(</span><span class="n">m</span> <span class="o">:</span> <span class="n">nat</span><span class="o">)</span> <span class="o">:</span> <span class="n">m</span> <span class="bp">+</span> <span class="n">zero</span> <span class="bp">=</span> <span class="n">m</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">theorem</span> <span class="n">add_succ</span> <span class="o">(</span><span class="n">m</span> <span class="n">n</span> <span class="o">:</span> <span class="n">nat</span><span class="o">)</span> <span class="o">:</span> <span class="n">m</span> <span class="bp">+</span> <span class="n">succ</span> <span class="n">n</span> <span class="bp">=</span> <span class="n">succ</span> <span class="o">(</span><span class="n">m</span> <span class="bp">+</span> <span class="n">n</span><span class="o">)</span> <span class="o">:=</span> <span class="n">rfl</span>
+
+<span class="kd">theorem</span> <span class="n">zero_add</span> <span class="o">:</span> <span class="bp">∀</span> <span class="n">n</span><span class="o">,</span> <span class="n">zero</span> <span class="bp">+</span> <span class="n">n</span> <span class="bp">=</span> <span class="n">n</span>
+<span class="bp">|</span> <span class="n">zero</span>     <span class="o">:=</span> <span class="n">rfl</span>
+<span class="bp">|</span> <span class="o">(</span><span class="n">succ</span> <span class="n">n</span><span class="o">)</span> <span class="o">:=</span> <span class="n">congr_arg</span> <span class="n">succ</span> <span class="o">(</span><span class="n">zero_add</span> <span class="n">n</span><span class="o">)</span>
+
+<span class="kd">def</span> <span class="n">mul</span> <span class="o">:</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span>
+<span class="bp">|</span> <span class="n">n</span> <span class="n">zero</span>     <span class="o">:=</span> <span class="n">zero</span>
+<span class="bp">|</span> <span class="n">n</span> <span class="o">(</span><span class="n">succ</span> <span class="n">m</span><span class="o">)</span> <span class="o">:=</span> <span class="n">mul</span> <span class="n">n</span> <span class="n">m</span> <span class="bp">+</span> <span class="n">m</span>
+</pre></div>
+</div>
+</div><p>The “definition” of <code class="docutils literal"><span class="pre">zero_add</span></code> makes it clear that proof by induction is really a form of induction in Lean.</p>
+<p>As with definition by pattern matching, parameters to a structural recursion or induction may appear before the colon. Such parameters are simply added to the local context before the definition is processed. For example, the definition of addition may be written as follows:</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=namespace%20hide%0A%0Ainductive%20nat%20:%20Type%0A%7C%20zero%20:%20nat%0A%7C%20succ%20:%20nat%20%E2%86%92%20nat%0A%0Anamespace%20nat%0A%0A--%20BEGIN%0Adef%20add%20(m%20:%20nat)%20:%20nat%20%E2%86%92%20nat%0A%7C%20zero%20%20%20%20%20:=%20m%0A%7C%20(succ%20n)%20:=%20succ%20(add%20n)%0A--%20END%0A%0Aend%20nat%0Aend%20hide" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">def</span> <span class="n">add</span> <span class="o">(</span><span class="n">m</span> <span class="o">:</span> <span class="n">nat</span><span class="o">)</span> <span class="o">:</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span>
+<span class="bp">|</span> <span class="n">zero</span>     <span class="o">:=</span> <span class="n">m</span>
+<span class="bp">|</span> <span class="o">(</span><span class="n">succ</span> <span class="n">n</span><span class="o">)</span> <span class="o">:=</span> <span class="n">succ</span> <span class="o">(</span><span class="n">add</span> <span class="n">n</span><span class="o">)</span>
+</pre></div>
+</div>
+</div><p>This may seem a little odd, but you should read the definition as follows: “Fix <code class="docutils literal"><span class="pre">m</span></code>, and define the function which adds something to <code class="docutils literal"><span class="pre">m</span></code> recursively, as follows. To add zero, return <code class="docutils literal"><span class="pre">m</span></code>. To add the successor of <code class="docutils literal"><span class="pre">n</span></code>, first add <code class="docutils literal"><span class="pre">n</span></code>, and then take the successor.” The mechanism for adding parameters to the local context is what makes it possible to process match expressions within terms, as described below.</p>
+<p>A more interesting example of structural recursion is given by the Fibonacci function <code class="docutils literal"><span class="pre">fib</span></code>.</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=def%20fib%20:%20nat%20%E2%86%92%20nat%0A%7C%200%20%20%20%20%20:=%201%0A%7C%201%20%20%20%20%20:=%201%0A%7C%20(a+2)%20:=%20fib%20(a+1)%20+%20fib%20a%0A%0A--%20the%20defining%20equations%20hold%20definitionally%0Aexample%20:%20fib%200%20=%201%20:=%20rfl%0Aexample%20:%20fib%201%20=%201%20:=%20rfl%0Aexample%20(a%20:%20nat)%20:%20fib%20(a+2)%20=%20fib%20(a+1)%20+%20fib%20a%20:=%20rfl" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">def</span> <span class="n">fib</span> <span class="o">:</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span>
+<span class="bp">|</span> <span class="mi">0</span>     <span class="o">:=</span> <span class="mi">1</span>
+<span class="bp">|</span> <span class="mi">1</span>     <span class="o">:=</span> <span class="mi">1</span>
+<span class="bp">|</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">2</span><span class="o">)</span> <span class="o">:=</span> <span class="n">fib</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="bp">+</span> <span class="n">fib</span> <span class="n">a</span>
+
+<span class="c1">-- the defining equations hold definitionally</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">fib</span> <span class="mi">0</span> <span class="bp">=</span> <span class="mi">1</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">fib</span> <span class="mi">1</span> <span class="bp">=</span> <span class="mi">1</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">(</span><span class="n">a</span> <span class="o">:</span> <span class="n">nat</span><span class="o">)</span> <span class="o">:</span> <span class="n">fib</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">2</span><span class="o">)</span> <span class="bp">=</span> <span class="n">fib</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="bp">+</span> <span class="n">fib</span> <span class="n">a</span> <span class="o">:=</span> <span class="n">rfl</span>
+</pre></div>
+</div>
+</div><p>Another classic example is the list <code class="docutils literal"><span class="pre">append</span></code> function.</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=namespace%20hide%0A--%20BEGIN%0Adef%20append%20%7B%CE%B1%20:%20Type%7D%20:%20list%20%CE%B1%20%E2%86%92%20list%20%CE%B1%20%E2%86%92%20list%20%CE%B1%0A%7C%20%5B%5D%20%20%20%20%20l%20:=%20l%0A%7C%20(h::t)%20l%20:=%20h%20::%20append%20t%20l%0A%0Aexample%20:%20append%20%5B(1%20:%20%E2%84%95),%202,%203%5D%20%5B4,%205%5D%20=%20%5B1,%202,%203,%204,%205%5D%20:=%20rfl%0A--%20END%0Aend%20hide" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">def</span> <span class="n">append</span> <span class="o">{</span><span class="n">α</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">}</span> <span class="o">:</span> <span class="n">list</span> <span class="n">α</span> <span class="bp">→</span> <span class="n">list</span> <span class="n">α</span> <span class="bp">→</span> <span class="n">list</span> <span class="n">α</span>
+<span class="bp">|</span> <span class="o">[]</span>     <span class="n">l</span> <span class="o">:=</span> <span class="n">l</span>
+<span class="bp">|</span> <span class="o">(</span><span class="n">h</span><span class="o">::</span><span class="n">t</span><span class="o">)</span> <span class="n">l</span> <span class="o">:=</span> <span class="n">h</span> <span class="o">::</span> <span class="n">append</span> <span class="n">t</span> <span class="n">l</span>
+
+<span class="kd">example</span> <span class="o">:</span> <span class="n">append</span> <span class="o">[(</span><span class="mi">1</span> <span class="o">:</span> <span class="n">ℕ</span><span class="o">),</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">]</span> <span class="o">[</span><span class="mi">4</span><span class="o">,</span> <span class="mi">5</span><span class="o">]</span> <span class="bp">=</span> <span class="o">[</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">5</span><span class="o">]</span> <span class="o">:=</span> <span class="n">rfl</span>
+</pre></div>
+</div>
+</div></div>
+<div class="section" id="dependent-pattern-matching">
+<h2>8.3. Dependent Pattern-Matching<a class="headerlink" href="#dependent-pattern-matching" title="Permalink to this headline">¶</a></h2>
+<p>All the examples we have seen so far can be easily written using <code class="docutils literal"><span class="pre">cases_on</span></code> and <code class="docutils literal"><span class="pre">rec_on</span></code>. However, this is not the case with indexed inductive families, such as <code class="docutils literal"><span class="pre">vector</span> <span class="pre">α</span> <span class="pre">n</span></code>. A lot of boilerplate code needs to be written to define very simple functions such as <code class="docutils literal"><span class="pre">map</span></code>, <code class="docutils literal"><span class="pre">zip</span></code>, and <code class="docutils literal"><span class="pre">unzip</span></code> using recursors.</p>
+<p>To understand the difficulty, consider what it would take to define a function <code class="docutils literal"><span class="pre">tail</span></code> which takes a vector <code class="docutils literal"><span class="pre">v</span> <span class="pre">:</span> <span class="pre">vector</span> <span class="pre">α</span> <span class="pre">(succ</span> <span class="pre">n)</span></code> and deletes the first element. A first thought might be to use the <code class="docutils literal"><span class="pre">cases_on</span></code> function:</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=namespace%20hide%0A--%20BEGIN%0Aopen%20nat%0A%0Ainductive%20vector%20(%CE%B1%20:%20Type)%20:%20nat%20%E2%86%92%20Type%0A%7C%20nil%20%7B%7D%20:%20vector%200%0A%7C%20cons%20%20%20:%20%CE%A0%20%7Bn%7D,%20%CE%B1%20%E2%86%92%20vector%20n%20%E2%86%92%20vector%20(succ%20n)%0A%0Aopen%20vector%0Alocal%20notation%20h%20::%20t%20:=%20cons%20h%20t%0A%0A#check%20&#64;vector.cases_on%0A--%20%CE%A0%20%7B%CE%B1%20:%20Type%7D%0A--%20%20%20%7BC%20:%20%CE%A0%20(a%20:%20%E2%84%95),%20vector%20%CE%B1%20a%20%E2%86%92%20Type%7D%0A--%20%20%20%7Ba%20:%20%E2%84%95%7D%0A--%20%20%20(n%20:%20vector%20%CE%B1%20a),%0A--%20%20%20(e1%20:%20C%200%20nil)%0A--%20%20%20(e2%20:%20%CE%A0%20%7Bn%20:%20%E2%84%95%7D%20(a%20:%20%CE%B1)%20(a_1%20:%20vector%20%CE%B1%20n),%0A--%20%20%20%20%20%20%20%20%20%20%20C%20(succ%20n)%20(cons%20a%20a_1)),%0A--%20%20%20C%20a%20n%0A--%20END%0A%0Aend%20hide" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kn">open</span> <span class="n">nat</span>
+
+<span class="kd">inductive</span> <span class="n">vector</span> <span class="o">(</span><span class="n">α</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">)</span> <span class="o">:</span> <span class="n">nat</span> <span class="bp">→</span> <span class="kt">Type</span>
+<span class="bp">|</span> <span class="n">nil</span> <span class="o">{}</span> <span class="o">:</span> <span class="n">vector</span> <span class="mi">0</span>
+<span class="bp">|</span> <span class="n">cons</span>   <span class="o">:</span> <span class="bp">Π</span> <span class="o">{</span><span class="n">n</span><span class="o">},</span> <span class="n">α</span> <span class="bp">→</span> <span class="n">vector</span> <span class="n">n</span> <span class="bp">→</span> <span class="n">vector</span> <span class="o">(</span><span class="n">succ</span> <span class="n">n</span><span class="o">)</span>
+
+<span class="kn">open</span> <span class="n">vector</span>
+<span class="kn">local</span> <span class="kd">notation</span> <span class="n">h</span> <span class="o">::</span> <span class="n">t</span> <span class="o">:=</span> <span class="n">cons</span> <span class="n">h</span> <span class="n">t</span>
+
+<span class="k">#check</span> <span class="bp">@</span><span class="n">vector.cases_on</span>
+<span class="c1">-- Π {α : Type}</span>
+<span class="c1">--   {C : Π (a : ℕ), vector α a → Type}</span>
+<span class="c1">--   {a : ℕ}</span>
+<span class="c1">--   (n : vector α a),</span>
+<span class="c1">--   (e1 : C 0 nil)</span>
+<span class="c1">--   (e2 : Π {n : ℕ} (a : α) (a_1 : vector α n),</span>
+<span class="c1">--           C (succ n) (cons a a_1)),</span>
+<span class="c1">--   C a n</span>
+</pre></div>
+</div>
+</div><p>But what value should we return in the <code class="docutils literal"><span class="pre">nil</span></code> case? Something funny is going on: if <code class="docutils literal"><span class="pre">v</span></code> has type <code class="docutils literal"><span class="pre">vector</span> <span class="pre">α</span> <span class="pre">(succ</span> <span class="pre">n)</span></code>, it <em>can’t</em> be nil, but it is not clear how to tell that to <code class="docutils literal"><span class="pre">cases_on</span></code>.</p>
+<p>One standard solution is to define an auxiliary function:</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=namespace%20hide%0Aopen%20nat%0A%0Ainductive%20vector%20(%CE%B1%20:%20Type)%20:%20nat%20%E2%86%92%20Type%0A%7C%20nil%20%7B%7D%20:%20vector%200%0A%7C%20cons%20%20%20:%20%CE%A0%20%7Bn%7D,%20%CE%B1%20%E2%86%92%20vector%20n%20%E2%86%92%20vector%20(succ%20n)%0A%0Aopen%20vector%0A%0A--%20BEGIN%0Adef%20tail_aux%20%7B%CE%B1%20:%20Type%7D%20%7Bn%20m%20:%20nat%7D%20(v%20:%20vector%20%CE%B1%20m)%20:%0A%20%20%20%20m%20=%20succ%20n%20%E2%86%92%20vector%20%CE%B1%20n%20:=%0Avector.cases_on%20v%0A%20%20(assume%20H%20:%200%20=%20succ%20n,%20nat.no_confusion%20H)%0A%20%20(take%20m%20(a%20:%20%CE%B1)%20w%20:%20vector%20%CE%B1%20m,%0A%20%20%20%20assume%20H%20:%20succ%20m%20=%20succ%20n,%0A%20%20%20%20%20%20nat.no_confusion%20H%20(%CE%BB%20H1%20:%20m%20=%20n,%20eq.rec_on%20H1%20w))%0A%0Adef%20tail%20%7B%CE%B1%20:%20Type%7D%20%7Bn%20:%20nat%7D%20(v%20:%20vector%20%CE%B1%20(succ%20n))%20:%0A%20%20vector%20%CE%B1%20n%20:=%0Atail_aux%20v%20rfl%0A--%20END%0Aend%20hide" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">def</span> <span class="n">tail_aux</span> <span class="o">{</span><span class="n">α</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">}</span> <span class="o">{</span><span class="n">n</span> <span class="n">m</span> <span class="o">:</span> <span class="n">nat</span><span class="o">}</span> <span class="o">(</span><span class="n">v</span> <span class="o">:</span> <span class="n">vector</span> <span class="n">α</span> <span class="n">m</span><span class="o">)</span> <span class="o">:</span>
+    <span class="n">m</span> <span class="bp">=</span> <span class="n">succ</span> <span class="n">n</span> <span class="bp">→</span> <span class="n">vector</span> <span class="n">α</span> <span class="n">n</span> <span class="o">:=</span>
+<span class="n">vector.cases_on</span> <span class="n">v</span>
+  <span class="o">(</span><span class="k">assume</span> <span class="n">H</span> <span class="o">:</span> <span class="mi">0</span> <span class="bp">=</span> <span class="n">succ</span> <span class="n">n</span><span class="o">,</span> <span class="n">nat.no_confusion</span> <span class="n">H</span><span class="o">)</span>
+  <span class="o">(</span><span class="n">take</span> <span class="n">m</span> <span class="o">(</span><span class="n">a</span> <span class="o">:</span> <span class="n">α</span><span class="o">)</span> <span class="n">w</span> <span class="o">:</span> <span class="n">vector</span> <span class="n">α</span> <span class="n">m</span><span class="o">,</span>
+    <span class="k">assume</span> <span class="n">H</span> <span class="o">:</span> <span class="n">succ</span> <span class="n">m</span> <span class="bp">=</span> <span class="n">succ</span> <span class="n">n</span><span class="o">,</span>
+      <span class="n">nat.no_confusion</span> <span class="n">H</span> <span class="o">(</span><span class="bp">λ</span> <span class="n">H1</span> <span class="o">:</span> <span class="n">m</span> <span class="bp">=</span> <span class="n">n</span><span class="o">,</span> <span class="n">eq.rec_on</span> <span class="n">H1</span> <span class="n">w</span><span class="o">))</span>
+
+<span class="kd">def</span> <span class="n">tail</span> <span class="o">{</span><span class="n">α</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">}</span> <span class="o">{</span><span class="n">n</span> <span class="o">:</span> <span class="n">nat</span><span class="o">}</span> <span class="o">(</span><span class="n">v</span> <span class="o">:</span> <span class="n">vector</span> <span class="n">α</span> <span class="o">(</span><span class="n">succ</span> <span class="n">n</span><span class="o">))</span> <span class="o">:</span>
+  <span class="n">vector</span> <span class="n">α</span> <span class="n">n</span> <span class="o">:=</span>
+<span class="n">tail_aux</span> <span class="n">v</span> <span class="n">rfl</span>
+</pre></div>
+</div>
+</div><p>In the <code class="docutils literal"><span class="pre">nil</span></code> case, <code class="docutils literal"><span class="pre">m</span></code> is instantiated to <code class="docutils literal"><span class="pre">0</span></code>, and <code class="docutils literal"><span class="pre">no_confusion</span></code> makes use of the fact that <code class="docutils literal"><span class="pre">0</span> <span class="pre">=</span> <span class="pre">succ</span> <span class="pre">n</span></code> cannot occur. Otherwise, <code class="docutils literal"><span class="pre">v</span></code> is of the form <code class="docutils literal"><span class="pre">a</span> <span class="pre">::</span> <span class="pre">w</span></code>, and we can simply return <code class="docutils literal"><span class="pre">w</span></code>, after casting it from a vector of length <code class="docutils literal"><span class="pre">m</span></code> to a vector of length <code class="docutils literal"><span class="pre">n</span></code>.</p>
+<p>The difficulty in defining <code class="docutils literal"><span class="pre">tail</span></code> is to maintain the relationships between the indices. The hypothesis <code class="docutils literal"><span class="pre">e</span> <span class="pre">:</span> <span class="pre">m</span> <span class="pre">=</span> <span class="pre">succ</span> <span class="pre">n</span></code> in <code class="docutils literal"><span class="pre">tail_aux</span></code> is used to “communicate” the relationship between <code class="docutils literal"><span class="pre">n</span></code> and the index associated with the minor premise. Moreover, the <code class="docutils literal"><span class="pre">zero</span> <span class="pre">=</span> <span class="pre">succ</span> <span class="pre">n</span></code> case is “unreachable,” and the canonical way to discard such a case is to use <code class="docutils literal"><span class="pre">no_confusion</span></code>.</p>
+<p>The <code class="docutils literal"><span class="pre">tail</span></code> function is, however, easy to define using recursive equations, and the function definition package generates all the boilerplate code automatically for us.</p>
+<p>Here are a number of examples:</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=namespace%20hide%0Aopen%20nat%0A%0Ainductive%20vector%20(%CE%B1%20:%20Type)%20:%20nat%20%E2%86%92%20Type%0A%7C%20nil%20%7B%7D%20:%20vector%200%0A%7C%20cons%20%20%20:%20%CE%A0%20%7Bn%7D,%20%CE%B1%20%E2%86%92%20vector%20n%20%E2%86%92%20vector%20(succ%20n)%0A%0Aopen%20vector%0Alocal%20notation%20h%20::%20t%20:=%20cons%20h%20t%0A%0A--%20BEGIN%0Adef%20head%20%7B%CE%B1%20:%20Type%7D%20:%20%CE%A0%20%7Bn%7D,%20vector%20%CE%B1%20(succ%20n)%20%E2%86%92%20%CE%B1%0A%7C%20n%20(h%20::%20t)%20:=%20h%0A%0Adef%20tail%20%7B%CE%B1%20:%20Type%7D%20:%20%CE%A0%20%7Bn%7D,%20vector%20%CE%B1%20(succ%20n)%20%E2%86%92%20vector%20%CE%B1%20n%0A%7C%20n%20(h%20::%20t)%20:=%20t%0A%0Alemma%20eta%20%7B%CE%B1%20:%20Type%7D%20:%0A%20%20%E2%88%80%20%7Bn%7D%20(v%20:%20vector%20%CE%B1%20(succ%20n)),%20head%20v%20::%20tail%20v%20=%20v%0A%7C%20n%20(h::t)%20:=%20rfl%0A%0Adef%20map%20%7B%CE%B1%20%CE%B2%20%CE%B3%20:%20Type%7D%20(f%20:%20%CE%B1%20%E2%86%92%20%CE%B2%20%E2%86%92%20%CE%B3)%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20:%20%CE%A0%20%7Bn%20:%20nat%7D,%20vector%20%CE%B1%20n%20%E2%86%92%20vector%20%CE%B2%20n%20%E2%86%92%20vector%20%CE%B3%20n%0A%7C%200%20%20%20%20%20%20%20%20nil%20%20%20%20%20nil%20%20%20%20%20:=%20nil%0A%7C%20(succ%20n)%20(a::va)%20(b::vb)%20:=%20f%20a%20b%20::%20map%20va%20vb%0A%0Adef%20zip%20%7B%CE%B1%20%CE%B2%20:%20Type%7D%20:%0A%20%20%CE%A0%20%7Bn%7D,%20vector%20%CE%B1%20n%20%E2%86%92%20vector%20%CE%B2%20n%20%E2%86%92%20vector%20(%CE%B1%20%C3%97%20%CE%B2)%20n%0A%7C%200%20%20%20%20%20%20%20%20nil%20nil%20%20%20%20%20%20%20%20%20:=%20nil%0A%7C%20(succ%20n)%20(a::va)%20(b::vb)%20:=%20(a,%20b)%20::%20zip%20va%20vb%0A--%20END%0Aend%20hide" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">def</span> <span class="n">head</span> <span class="o">{</span><span class="n">α</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">}</span> <span class="o">:</span> <span class="bp">Π</span> <span class="o">{</span><span class="n">n</span><span class="o">},</span> <span class="n">vector</span> <span class="n">α</span> <span class="o">(</span><span class="n">succ</span> <span class="n">n</span><span class="o">)</span> <span class="bp">→</span> <span class="n">α</span>
+<span class="bp">|</span> <span class="n">n</span> <span class="o">(</span><span class="n">h</span> <span class="o">::</span> <span class="n">t</span><span class="o">)</span> <span class="o">:=</span> <span class="n">h</span>
+
+<span class="kd">def</span> <span class="n">tail</span> <span class="o">{</span><span class="n">α</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">}</span> <span class="o">:</span> <span class="bp">Π</span> <span class="o">{</span><span class="n">n</span><span class="o">},</span> <span class="n">vector</span> <span class="n">α</span> <span class="o">(</span><span class="n">succ</span> <span class="n">n</span><span class="o">)</span> <span class="bp">→</span> <span class="n">vector</span> <span class="n">α</span> <span class="n">n</span>
+<span class="bp">|</span> <span class="n">n</span> <span class="o">(</span><span class="n">h</span> <span class="o">::</span> <span class="n">t</span><span class="o">)</span> <span class="o">:=</span> <span class="n">t</span>
+
+<span class="kd">lemma</span> <span class="n">eta</span> <span class="o">{</span><span class="n">α</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">}</span> <span class="o">:</span>
+  <span class="bp">∀</span> <span class="o">{</span><span class="n">n</span><span class="o">}</span> <span class="o">(</span><span class="n">v</span> <span class="o">:</span> <span class="n">vector</span> <span class="n">α</span> <span class="o">(</span><span class="n">succ</span> <span class="n">n</span><span class="o">)),</span> <span class="n">head</span> <span class="n">v</span> <span class="o">::</span> <span class="n">tail</span> <span class="n">v</span> <span class="bp">=</span> <span class="n">v</span>
+<span class="bp">|</span> <span class="n">n</span> <span class="o">(</span><span class="n">h</span><span class="o">::</span><span class="n">t</span><span class="o">)</span> <span class="o">:=</span> <span class="n">rfl</span>
+
+<span class="kd">def</span> <span class="n">map</span> <span class="o">{</span><span class="n">α</span> <span class="n">β</span> <span class="n">γ</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">}</span> <span class="o">(</span><span class="n">f</span> <span class="o">:</span> <span class="n">α</span> <span class="bp">→</span> <span class="n">β</span> <span class="bp">→</span> <span class="n">γ</span><span class="o">)</span>
+               <span class="o">:</span> <span class="bp">Π</span> <span class="o">{</span><span class="n">n</span> <span class="o">:</span> <span class="n">nat</span><span class="o">},</span> <span class="n">vector</span> <span class="n">α</span> <span class="n">n</span> <span class="bp">→</span> <span class="n">vector</span> <span class="n">β</span> <span class="n">n</span> <span class="bp">→</span> <span class="n">vector</span> <span class="n">γ</span> <span class="n">n</span>
+<span class="bp">|</span> <span class="mi">0</span>        <span class="n">nil</span>     <span class="n">nil</span>     <span class="o">:=</span> <span class="n">nil</span>
+<span class="bp">|</span> <span class="o">(</span><span class="n">succ</span> <span class="n">n</span><span class="o">)</span> <span class="o">(</span><span class="n">a</span><span class="o">::</span><span class="n">va</span><span class="o">)</span> <span class="o">(</span><span class="n">b</span><span class="o">::</span><span class="n">vb</span><span class="o">)</span> <span class="o">:=</span> <span class="n">f</span> <span class="n">a</span> <span class="n">b</span> <span class="o">::</span> <span class="n">map</span> <span class="n">va</span> <span class="n">vb</span>
+
+<span class="kd">def</span> <span class="n">zip</span> <span class="o">{</span><span class="n">α</span> <span class="n">β</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">}</span> <span class="o">:</span>
+  <span class="bp">Π</span> <span class="o">{</span><span class="n">n</span><span class="o">},</span> <span class="n">vector</span> <span class="n">α</span> <span class="n">n</span> <span class="bp">→</span> <span class="n">vector</span> <span class="n">β</span> <span class="n">n</span> <span class="bp">→</span> <span class="n">vector</span> <span class="o">(</span><span class="n">α</span> <span class="bp">×</span> <span class="n">β</span><span class="o">)</span> <span class="n">n</span>
+<span class="bp">|</span> <span class="mi">0</span>        <span class="n">nil</span> <span class="n">nil</span>         <span class="o">:=</span> <span class="n">nil</span>
+<span class="bp">|</span> <span class="o">(</span><span class="n">succ</span> <span class="n">n</span><span class="o">)</span> <span class="o">(</span><span class="n">a</span><span class="o">::</span><span class="n">va</span><span class="o">)</span> <span class="o">(</span><span class="n">b</span><span class="o">::</span><span class="n">vb</span><span class="o">)</span> <span class="o">:=</span> <span class="o">(</span><span class="n">a</span><span class="o">,</span> <span class="n">b</span><span class="o">)</span> <span class="o">::</span> <span class="n">zip</span> <span class="n">va</span> <span class="n">vb</span>
+</pre></div>
+</div>
+</div><p>Note that we can omit recursive equations for “unreachable” cases such as <code class="docutils literal"><span class="pre">head</span> <span class="pre">nil</span></code>. The automatically generated definitions for indexed families are far from straightforward. For example:</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=namespace%20hide%0Aopen%20nat%0A%0Ainductive%20vector%20(%CE%B1%20:%20Type)%20:%20nat%20%E2%86%92%20Type%0A%7C%20nil%20%7B%7D%20:%20vector%200%0A%7C%20cons%20%20%20:%20%CE%A0%20%7Bn%7D,%20%CE%B1%20%E2%86%92%20vector%20n%20%E2%86%92%20vector%20(succ%20n)%0A%0Aopen%20vector%0Alocal%20notation%20h%20::%20t%20:=%20cons%20h%20t%0A%0Adef%20map%20%7B%CE%B1%20%CE%B2%20%CE%B3%20:%20Type%7D%20(f%20:%20%CE%B1%20%E2%86%92%20%CE%B2%20%E2%86%92%20%CE%B3)%0A%20%20%20%20%20%20%20%20:%20%CE%A0%20%7Bn%20:%20nat%7D,%20vector%20%CE%B1%20n%20%E2%86%92%20vector%20%CE%B2%20n%20%E2%86%92%20vector%20%CE%B3%20n%0A%7C%200%20%20%20%20%20%20%20%20nil%20%20%20%20%20nil%20%20%20%20%20:=%20nil%0A%7C%20(succ%20n)%20(a::va)%20(b::vb)%20:=%20f%20a%20b%20::%20map%20va%20vb%0A%0A--%20BEGIN%0A#print%20map%0A#print%20map._main%0A--%20END%0Aend%20hide" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="k">#print</span> <span class="n">map</span>
+<span class="k">#print</span> <span class="n">map._main</span>
+</pre></div>
+</div>
+</div><p>The <code class="docutils literal"><span class="pre">map</span></code> function is even more tedious to define by hand than the <code class="docutils literal"><span class="pre">tail</span></code> function. We encourage you to try it, using <code class="docutils literal"><span class="pre">rec_on</span></code>, <code class="docutils literal"><span class="pre">cases_on</span></code> and <code class="docutils literal"><span class="pre">no_confusion</span></code>.</p>
+</div>
+<div class="section" id="variations-on-pattern-matching">
+<h2>8.4. Variations on Pattern Matching<a class="headerlink" href="#variations-on-pattern-matching" title="Permalink to this headline">¶</a></h2>
+<p>We say that a set of recursive equations <em>overlaps</em> when there is an input that more than one left-hand-side can match. In the following definition the input <code class="docutils literal"><span class="pre">0</span> <span class="pre">0</span></code> matches the left-hand-side of the first two equations. Should the function return <code class="docutils literal"><span class="pre">1</span></code> or <code class="docutils literal"><span class="pre">2</span></code>?</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=def%20f%20:%20nat%20%E2%86%92%20nat%20%E2%86%92%20nat%0A%7C%200%20%20%20%20%20y%20%20%20%20%20:=%201%0A%7C%20x%20%20%20%20%200%20%20%20%20%20:=%202%0A%7C%20(x+1)%20(y+1)%20:=%203" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">def</span> <span class="n">f</span> <span class="o">:</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span>
+<span class="bp">|</span> <span class="mi">0</span>     <span class="n">y</span>     <span class="o">:=</span> <span class="mi">1</span>
+<span class="bp">|</span> <span class="n">x</span>     <span class="mi">0</span>     <span class="o">:=</span> <span class="mi">2</span>
+<span class="bp">|</span> <span class="o">(</span><span class="n">x</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="o">(</span><span class="n">y</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="o">:=</span> <span class="mi">3</span>
+</pre></div>
+</div>
+</div><p>Overlapping patterns are often used to succinctly express complex patterns in data, and they are allowed in Lean. Lean handles the ambiguity by using the first applicable equation. In the example above, the following equations hold definitionally:</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=def%20f%20:%20nat%20%E2%86%92%20nat%20%E2%86%92%20nat%0A%7C%200%20%20%20%20%20y%20%20%20%20%20:=%201%0A%7C%20x%20%20%20%20%200%20%20%20%20%20:=%202%0A%7C%20(x+1)%20(y+1)%20:=%203%0A%0A--%20BEGIN%0Avariables%20(a%20b%20:%20nat)%0A%0Aexample%20:%20f%200%20%20%20%20%200%20%20%20%20%20=%201%20:=%20rfl%0Aexample%20:%20f%200%20%20%20%20%20(a+1)%20=%201%20:=%20rfl%0Aexample%20:%20f%20(a+1)%200%20%20%20%20%20=%202%20:=%20rfl%0Aexample%20:%20f%20(a+1)%20(b+1)%20=%203%20:=%20rfl%0A--%20END" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">variables</span> <span class="o">(</span><span class="n">a</span> <span class="n">b</span> <span class="o">:</span> <span class="n">nat</span><span class="o">)</span>
+
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f</span> <span class="mi">0</span>     <span class="mi">0</span>     <span class="bp">=</span> <span class="mi">1</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f</span> <span class="mi">0</span>     <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="bp">=</span> <span class="mi">1</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="mi">0</span>     <span class="bp">=</span> <span class="mi">2</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="o">(</span><span class="n">b</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="bp">=</span> <span class="mi">3</span> <span class="o">:=</span> <span class="n">rfl</span>
+</pre></div>
+</div>
+</div><p>Lean also supports <em>wildcard patterns</em>, also known as <em>anonymous variables</em>. They are used to create patterns where we don’t care about the value of a specific argument. In the function <code class="docutils literal"><span class="pre">f</span></code> defined above, the values of <code class="docutils literal"><span class="pre">x</span></code> and <code class="docutils literal"><span class="pre">y</span></code> are not used in the right-hand-side. Here is the same example using wildcards:</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=def%20f%20:%20nat%20%E2%86%92%20nat%20%E2%86%92%20nat%0A%7C%200%20%20_%20%20:=%201%0A%7C%20_%20%200%20%20:=%202%0A%7C%20_%20%20_%20%20:=%203%0Avariables%20(a%20b%20:%20nat)%0Aexample%20:%20f%200%20%20%20%20%200%20%20%20%20%20=%201%20:=%20rfl%0Aexample%20:%20f%200%20%20%20%20%20(a+1)%20=%201%20:=%20rfl%0Aexample%20:%20f%20(a+1)%200%20%20%20%20%20=%202%20:=%20rfl%0Aexample%20:%20f%20(a+1)%20(b+1)%20=%203%20:=%20rfl" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">def</span> <span class="n">f</span> <span class="o">:</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span>
+<span class="bp">|</span> <span class="mi">0</span>  <span class="n">_</span>  <span class="o">:=</span> <span class="mi">1</span>
+<span class="bp">|</span> <span class="n">_</span>  <span class="mi">0</span>  <span class="o">:=</span> <span class="mi">2</span>
+<span class="bp">|</span> <span class="n">_</span>  <span class="n">_</span>  <span class="o">:=</span> <span class="mi">3</span>
+<span class="kd">variables</span> <span class="o">(</span><span class="n">a</span> <span class="n">b</span> <span class="o">:</span> <span class="n">nat</span><span class="o">)</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f</span> <span class="mi">0</span>     <span class="mi">0</span>     <span class="bp">=</span> <span class="mi">1</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f</span> <span class="mi">0</span>     <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="bp">=</span> <span class="mi">1</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="mi">0</span>     <span class="bp">=</span> <span class="mi">2</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="o">(</span><span class="n">b</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="bp">=</span> <span class="mi">3</span> <span class="o">:=</span> <span class="n">rfl</span>
+</pre></div>
+</div>
+</div><p>Some functional languages support <em>incomplete patterns</em>. In these languages, the interpreter produces an exception or returns an arbitrary value for incomplete cases. We can simulate the arbitrary value approach using the <code class="docutils literal"><span class="pre">inhabited</span></code> type class._ Roughly, an element of <code class="docutils literal"><span class="pre">inhabited</span> <span class="pre">α</span></code> is simply a witness to the fact that there is an element of <code class="docutils literal"><span class="pre">α</span></code>; in <a class="reference internal" href="type_classes.html#type-classes"><span class="std std-numref">Chapter 10</span></a> we will see that Lean can be instructed that suitable base types are inhabited, and can automatically infer that other constructed types are inhabited on that basis. On this basis, the standard library provides an arbitrary element, <code class="docutils literal"><span class="pre">arbitrary</span> <span class="pre">α</span></code>, of any inhabited type.</p>
+<p>We can also use the type <code class="docutils literal"><span class="pre">option</span> <span class="pre">α</span></code> to simulate incomplete patterns. The idea is to return <code class="docutils literal"><span class="pre">some</span> <span class="pre">a</span></code> for the provided patterns, and use <code class="docutils literal"><span class="pre">none</span></code> for the incomplete cases. The following example demonstrates both approaches.</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=def%20f1%20:%20nat%20%E2%86%92%20nat%20%E2%86%92%20nat%0A%7C%200%20%20_%20%20:=%201%0A%7C%20_%20%200%20%20:=%202%0A%7C%20_%20%20_%20%20:=%20arbitrary%20nat%20%20%20--%20the%20%22incomplete%22%20case%0A%0Avariables%20(a%20b%20:%20nat)%0A%0Aexample%20:%20f1%200%20%20%20%20%200%20%20%20%20%20=%201%20:=%20rfl%0Aexample%20:%20f1%200%20%20%20%20%20(a+1)%20=%201%20:=%20rfl%0Aexample%20:%20f1%20(a+1)%200%20%20%20%20%20=%202%20:=%20rfl%0Aexample%20:%20f1%20(a+1)%20(b+1)%20=%20arbitrary%20nat%20:=%20rfl%0A%0Adef%20f2%20:%20nat%20%E2%86%92%20nat%20%E2%86%92%20option%20nat%0A%7C%200%20%20_%20%20:=%20some%201%0A%7C%20_%20%200%20%20:=%20some%202%0A%7C%20_%20%20_%20%20:=%20none%20%20%20%20%20%20%20%20%20%20%20%20--%20the%20%22incomplete%22%20case%0A%0Aexample%20:%20f2%200%20%20%20%20%200%20%20%20%20%20=%20some%201%20:=%20rfl%0Aexample%20:%20f2%200%20%20%20%20%20(a+1)%20=%20some%201%20:=%20rfl%0Aexample%20:%20f2%20(a+1)%200%20%20%20%20%20=%20some%202%20:=%20rfl%0Aexample%20:%20f2%20(a+1)%20(b+1)%20=%20none%20%20%20:=%20rfl" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">def</span> <span class="n">f1</span> <span class="o">:</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span>
+<span class="bp">|</span> <span class="mi">0</span>  <span class="n">_</span>  <span class="o">:=</span> <span class="mi">1</span>
+<span class="bp">|</span> <span class="n">_</span>  <span class="mi">0</span>  <span class="o">:=</span> <span class="mi">2</span>
+<span class="bp">|</span> <span class="n">_</span>  <span class="n">_</span>  <span class="o">:=</span> <span class="n">arbitrary</span> <span class="n">nat</span>   <span class="c1">-- the &quot;incomplete&quot; case</span>
+
+<span class="kd">variables</span> <span class="o">(</span><span class="n">a</span> <span class="n">b</span> <span class="o">:</span> <span class="n">nat</span><span class="o">)</span>
+
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f1</span> <span class="mi">0</span>     <span class="mi">0</span>     <span class="bp">=</span> <span class="mi">1</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f1</span> <span class="mi">0</span>     <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="bp">=</span> <span class="mi">1</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f1</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="mi">0</span>     <span class="bp">=</span> <span class="mi">2</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f1</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="o">(</span><span class="n">b</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="bp">=</span> <span class="n">arbitrary</span> <span class="n">nat</span> <span class="o">:=</span> <span class="n">rfl</span>
+
+<span class="kd">def</span> <span class="n">f2</span> <span class="o">:</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">nat</span> <span class="bp">→</span> <span class="n">option</span> <span class="n">nat</span>
+<span class="bp">|</span> <span class="mi">0</span>  <span class="n">_</span>  <span class="o">:=</span> <span class="n">some</span> <span class="mi">1</span>
+<span class="bp">|</span> <span class="n">_</span>  <span class="mi">0</span>  <span class="o">:=</span> <span class="n">some</span> <span class="mi">2</span>
+<span class="bp">|</span> <span class="n">_</span>  <span class="n">_</span>  <span class="o">:=</span> <span class="n">none</span>            <span class="c1">-- the &quot;incomplete&quot; case</span>
+
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f2</span> <span class="mi">0</span>     <span class="mi">0</span>     <span class="bp">=</span> <span class="n">some</span> <span class="mi">1</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f2</span> <span class="mi">0</span>     <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="bp">=</span> <span class="n">some</span> <span class="mi">1</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f2</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="mi">0</span>     <span class="bp">=</span> <span class="n">some</span> <span class="mi">2</span> <span class="o">:=</span> <span class="n">rfl</span>
+<span class="kd">example</span> <span class="o">:</span> <span class="n">f2</span> <span class="o">(</span><span class="n">a</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="o">(</span><span class="n">b</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="bp">=</span> <span class="n">none</span>   <span class="o">:=</span> <span class="n">rfl</span>
+</pre></div>
+</div>
+</div></div>
+<div class="section" id="inaccessible-terms">
+<h2>8.5. Inaccessible Terms<a class="headerlink" href="#inaccessible-terms" title="Permalink to this headline">¶</a></h2>
+<p>Sometimes an argument in a dependent matching pattern is not essential to the definition, but nonetheless has to be included to specialize the type of the expression appropriately. Lean allows users to mark such subterms as <em>inaccessible</em> for pattern matching. These annotations are essential, for example, when a term occurring in the left-hand side is neither a variable nor a constructor application, because these are not suitable targets for pattern matching. We can view such inaccessible terms as “don’t care” components of the patterns. You can declare a subterm inaccessible by writing <code class="docutils literal"><span class="pre">.(t)</span></code>. If the inaccessible term can be inferred, you can also write <code class="docutils literal"><span class="pre">._</span></code>.</p>
+<p>The following example can be found in <a class="reference internal" href="#gomm06" id="id2">[GoMM06]</a>. We declare an inductive type that defines the property of “being in the image of <code class="docutils literal"><span class="pre">f</span></code>”. You can view an element of the type <code class="docutils literal"><span class="pre">image_of</span> <span class="pre">f</span> <span class="pre">b</span></code> as evidence that <code class="docutils literal"><span class="pre">b</span></code> is in the image of <code class="docutils literal"><span class="pre">f</span></code>, whereby the constructor <code class="docutils literal"><span class="pre">imf</span></code> is used to build such evidence. We can then define any function <code class="docutils literal"><span class="pre">f</span></code> with an “inverse” which takes anything in the image of <code class="docutils literal"><span class="pre">f</span></code> to an element that is mapped to it. The typing rules forces us to write <code class="docutils literal"><span class="pre">f</span> <span class="pre">a</span></code> for the first argument, but this term is neither a variable nor a constructor application, and plays no role in the pattern-matching definition. To define the function <code class="docutils literal"><span class="pre">inverse</span></code> below, we <em>have to</em> mark <code class="docutils literal"><span class="pre">f</span> <span class="pre">a</span></code> inaccessible.</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=variables%20%7B%CE%B1%20%CE%B2%20:%20Type%7D%0Ainductive%20image_of%20(f%20:%20%CE%B1%20%E2%86%92%20%CE%B2)%20:%20%CE%B2%20%E2%86%92%20Type%0A%7C%20imf%20:%20%CE%A0%20a,%20image_of%20(f%20a)%0A%0Aopen%20image_of%0A%0Adef%20inverse%20%7Bf%20:%20%CE%B1%20%E2%86%92%20%CE%B2%7D%20:%20%CE%A0%20b,%20image_of%20f%20b%20%E2%86%92%20%CE%B1%0A%7C%20.(f%20a)%20(imf%20.(f)%20a)%20:=%20a" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">variables</span> <span class="o">{</span><span class="n">α</span> <span class="n">β</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">}</span>
+<span class="kd">inductive</span> <span class="n">image_of</span> <span class="o">(</span><span class="n">f</span> <span class="o">:</span> <span class="n">α</span> <span class="bp">→</span> <span class="n">β</span><span class="o">)</span> <span class="o">:</span> <span class="n">β</span> <span class="bp">→</span> <span class="kt">Type</span>
+<span class="bp">|</span> <span class="n">imf</span> <span class="o">:</span> <span class="bp">Π</span> <span class="n">a</span><span class="o">,</span> <span class="n">image_of</span> <span class="o">(</span><span class="n">f</span> <span class="n">a</span><span class="o">)</span>
+
+<span class="kn">open</span> <span class="n">image_of</span>
+
+<span class="kd">def</span> <span class="n">inverse</span> <span class="o">{</span><span class="n">f</span> <span class="o">:</span> <span class="n">α</span> <span class="bp">→</span> <span class="n">β</span><span class="o">}</span> <span class="o">:</span> <span class="bp">Π</span> <span class="n">b</span><span class="o">,</span> <span class="n">image_of</span> <span class="n">f</span> <span class="n">b</span> <span class="bp">→</span> <span class="n">α</span>
+<span class="bp">|</span> <span class="bp">.</span><span class="o">(</span><span class="n">f</span> <span class="n">a</span><span class="o">)</span> <span class="o">(</span><span class="n">imf</span> <span class="bp">.</span><span class="o">(</span><span class="n">f</span><span class="o">)</span> <span class="n">a</span><span class="o">)</span> <span class="o">:=</span> <span class="n">a</span>
+</pre></div>
+</div>
+</div><p>In the example above, the inaccessible annotation makes it clear that
+<code class="docutils literal"><span class="pre">f</span></code> is <em>not</em> a pattern matching variable.</p>
+</div>
+<div class="section" id="match-expressions">
+<h2>8.6. Match Expressions<a class="headerlink" href="#match-expressions" title="Permalink to this headline">¶</a></h2>
+<p>Lean also provides a compiler for <em>match-with</em> expressions found in many functional languages. It uses essentially the same infrastructure used to compile recursive equations.</p>
+<div style="position: relative">
+<div style='position: absolute; right: 0; top: 0; padding: 1ex'><a href="https://leanprover.github.io/live/3.2.0/#code=--%20BEGIN%0Adef%20is_not_zero%20(a%20:%20nat)%20:%20bool%20:=%0Amatch%20a%20with%0A%7C%200%20%20%20%20%20:=%20ff%0A%7C%20(n+1)%20:=%20tt%0Aend%0A%0A--%20We%20can%20use%20recursive%20equations%20and%20match%0Avariable%20%7B%CE%B1%20:%20Type%7D%0Avariable%20p%20:%20%CE%B1%20%E2%86%92%20bool%0A%0Adef%20filter%20:%20list%20%CE%B1%20%E2%86%92%20list%20%CE%B1%0A%7C%20%5B%5D%20%20%20%20%20%20%20:=%20%5B%5D%0A%7C%20(a%20::%20l)%20:=%0A%20%20match%20p%20a%20with%0A%20%20%7C%20%20tt%20:=%20a%20::%20filter%20l%0A%20%20%7C%20%20ff%20:=%20filter%20l%0A%20%20end%0A%0Aexample%20:%20filter%20is_not_zero%20%5B1,%200,%200,%203,%200%5D%20=%20%5B1,%203%5D%20:=%20rfl%0A--%20END" target="_blank">
+try it!</a></div><div class="highlight-lean"><div class="highlight"><pre><span class="kd">def</span> <span class="n">is_not_zero</span> <span class="o">(</span><span class="n">a</span> <span class="o">:</span> <span class="n">nat</span><span class="o">)</span> <span class="o">:</span> <span class="n">bool</span> <span class="o">:=</span>
+<span class="k">match</span> <span class="n">a</span> <span class="k">with</span>
+<span class="bp">|</span> <span class="mi">0</span>     <span class="o">:=</span> <span class="n">ff</span>
+<span class="bp">|</span> <span class="o">(</span><span class="n">n</span><span class="bp">+</span><span class="mi">1</span><span class="o">)</span> <span class="o">:=</span> <span class="n">tt</span>
+<span class="kd">end</span>
+
+<span class="c1">-- We can use recursive equations and match</span>
+<span class="kd">variable</span> <span class="o">{</span><span class="n">α</span> <span class="o">:</span> <span class="kt">Type</span><span class="o">}</span>
+<span class="kd">variable</span> <span class="n">p</span> <span class="o">:</span> <span class="n">α</span> <span class="bp">→</span> <span class="n">bool</span>
+
+<span class="kd">def</span> <span class="n">filter</span> <span class="o">:</span> <span class="n">list</span> <span class="n">α</span> <span class="bp">→</span> <span class="n">list</span> <span class="n">α</span>
+<span class="bp">|</span> <span class="o">[]</span>       <span class="o">:=</span> <span class="o">[]</span>
+<span class="bp">|</span> <span class="o">(</span><span class="n">a</span> <span class="o">::</span> <span class="n">l</span><span class="o">)</span> <span class="o">:=</span>
+  <span class="k">match</span> <span class="n">p</span> <span class="n">a</span> <span class="k">with</span>
+  <span class="bp">|</span>  <span class="n">tt</span> <span class="o">:=</span> <span class="n">a</span> <span class="o">::</span> <span class="n">filter</span> <span class="n">l</span>
+  <span class="bp">|</span>  <span class="n">ff</span> <span class="o">:=</span> <span class="n">filter</span> <span class="n">l</span>
+  <span class="kd">end</span>
+
+<span class="kd">example</span> <span class="o">:</span> <span class="n">filter</span> <span class="n">is_not_zero</span> <span class="o">[</span><span class="mi">1</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">0</span><span class="o">]</span> <span class="bp">=</span> <span class="o">[</span><span class="mi">1</span><span class="o">,</span> <span class="mi">3</span><span class="o">]</span> <span class="o">:=</span> <span class="n">rfl</span>
+</pre></div>
+</div>
+</div><table class="docutils citation" frame="void" id="gomm06" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id2">[GoMM06]</a></td><td>Healfdene Goguen, Conor McBride, and James McKinna. Eliminating dependent pattern matching. In Kokichi Futatsugi, Jean-Pierre Jouannaud, and José Meseguer, editors, Algebra, Meaning, and Computation, Essays Dedicated to Joseph A. Goguen on the Occasion of His 65th Birthday, volume 4060 of Lecture Notes in Computer Science, pages 521–540. Springer, 2006.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Theorem Proving in Lean</a></h1>
+
+
+
+
+
+
+
+
+<!-- <h3>Navigation</h3> -->
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dependent_type_theory.html">2. Dependent Type Theory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="propositions_and_proofs.html">3. Propositions and Proofs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantifiers_and_equality.html">4. Quantifiers and Equality</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tactics.html">5. Tactics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interacting_with_lean.html">6. Interacting with Lean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inductive_types.html">7. Inductive Types</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">8. Induction and Recursion</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pattern-matching">8.1. Pattern Matching</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#structural-recursion-and-induction">8.2. Structural Recursion and Induction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dependent-pattern-matching">8.3. Dependent Pattern-Matching</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#variations-on-pattern-matching">8.4. Variations on Pattern Matching</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inaccessible-terms">8.5. Inaccessible Terms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#match-expressions">8.6. Match Expressions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="structures_and_records.html">9. Structures and Records</a></li>
+<li class="toctree-l1"><a class="reference internal" href="type_classes.html">10. Type Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="axioms_and_computation.html">11. Axioms and Computation</a></li>
+</ul>
+
+
+<hr />
+<ul>
+    
+    <li class="toctree-l1"><a href="theorem_proving_in_lean.pdf">PDF version</a></li>
+    
+    <li class="toctree-l1"><a href="https://leanprover.github.io/">Lean Home</a></li>
+    
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;1970, Jeremy Avigad, Leonardo de Moura, and Soonho Kong.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/induction_and_recursion.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
